@@ -1,0 +1,817 @@
+.layout {
+  height: 100svh;
+  box-sizing: border-box;
+  padding: 16px;
+  gap: 16px;
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  grid-template-rows: 3fr 1fr;
+  grid-template-areas:
+    'tasks calendar'
+    'nav calendar';
+}
+
+.panel {
+  min-width: 0;
+  min-height: 0;
+  border-radius: 12px;
+  border: 2px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.tasks {
+  grid-area: tasks;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  cursor: text;
+  transition: border-color 0.2s;
+
+  &:focus-within {
+    border-color: var(--accent);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 500;
+  }
+}
+
+/* Tasks heading on the left, the Notes button on the right. */
+.tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  /* Same size as the heading next to it. */
+  .back-button {
+    font-size: 22px;
+  }
+}
+
+.md-file-error {
+  margin: 0 0 8px;
+  color: #d33;
+  font-size: 14px;
+}
+
+.tasks-text {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 20px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+.calendar {
+  grid-area: calendar;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--bubble-border);
+  background: var(--bg);
+  overflow: hidden;
+  position: relative;
+}
+.main-nav {
+  grid-area: nav;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 10px;
+}
+
+.nav-button {
+  padding: 4px;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.calendars-menu {
+  position: absolute;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  font-size: 16px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--bubble-bg);
+    }
+  }
+
+  input {
+    accent-color: var(--accent);
+  }
+}
+
+.calendars-menu-new {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: none;
+  border-top: 1px solid var(--bubble-border);
+  border-radius: 0 0 4px 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--bubble-bg);
+  }
+}
+
+.calendars-menu-empty {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+/* A .ics file that couldn't be parsed; hover shows why. */
+.calendars-menu-broken {
+  opacity: 0.6;
+}
+
+/* Problems loading or saving the calendar files. */
+.calendar-error {
+  position: absolute;
+  z-index: 11;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #dc2626;
+  background: var(--bg);
+  color: #dc2626;
+  font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+  button {
+    border: none;
+    background: none;
+    color: inherit;
+    font-size: 16px;
+    cursor: pointer;
+  }
+}
+
+.event-dialog-error {
+  margin: 0;
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.calendar-color-field input[type='color'] {
+  width: 64px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--bubble-border);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.event-dialog {
+  width: min(420px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.25);
+
+  &::backdrop {
+    background: rgba(0, 0, 0, 0.4);
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 500;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 14px;
+  }
+
+  input,
+  textarea {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--bubble-border);
+    background: var(--bubble-bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+    resize: vertical;
+
+    &:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: -1px;
+    }
+  }
+}
+
+.event-dialog-date {
+  margin: -8px 0 0;
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.event-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+
+  button {
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--bubble-border);
+    background: var(--bubble-bg);
+    color: var(--text);
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+  }
+}
+
+.event-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.event-dialog-description {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+
+  &.empty {
+    opacity: 0.5;
+    font-style: italic;
+  }
+}
+
+/* Overflow indicator in month view: styled like an event bar, reading "...". */
+.more-events-bar {
+  display: block;
+  box-sizing: border-box;
+  width: calc(100% - 4px);
+  margin: 1px 2px 0;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--bubble-bg);
+  border: 1px solid var(--bubble-border);
+  color: var(--text);
+  font-size: 0.85em;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.event-dialog-actions .danger {
+  margin-right: auto;
+  color: #dc2626;
+
+  &:hover {
+    border-color: #dc2626;
+  }
+}
+
+/* Day highlighted by a single click in month view. */
+.selected-day {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.event-dialog select {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+
+  &:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+}
+
+.event-dialog-calendar {
+  align-self: flex-start;
+  margin: -4px 0 0;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  font-size: 13px;
+}
+
+/* Small color dot identifying a subcalendar. */
+.calendar-swatch {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.event-dialog-calendar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Start time + repeat side by side in the event forms. */
+.event-dialog-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  input,
+  select {
+    min-width: 0;
+  }
+}
+
+.event-dialog-clear {
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.event-dialog-hint {
+  font-size: 12px;
+  opacity: 0.6;
+  min-height: 1em;
+}
+
+/* 12-hour start time: [hh] : [mm] [AM/PM] */
+.time-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  input {
+    width: 2.6em;
+    flex: none;
+    text-align: center;
+  }
+}
+
+.event-dialog .time-input-period {
+  padding: 8px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+.calendar[hidden] {
+  display: none;
+}
+
+.panel.active {
+  border-color: var(--accent);
+}
+
+/* Events, Projects and Info pages: replace the calendar while open. */
+.sources-screen,
+.projects-screen {
+  grid-area: calendar;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid var(--bubble-border);
+  background: var(--bg);
+  overflow: auto;
+}
+
+.sources-screen-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 500;
+  }
+}
+
+.source-bubbles {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 16px;
+  padding-top: 16px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+  }
+}
+
+.source-bubble {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 2px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  cursor: text;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+  &:focus-within {
+    border-color: var(--accent);
+  }
+}
+
+.source-title {
+  font-size: 20px;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.source-notes {
+  flex: 1;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  resize: none;
+  outline: none;
+}
+
+/* Projects and Info pages: round bubbles centered in the main area. */
+.project-bubbles {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 24px 0;
+}
+
+.project-bubble {
+  width: 200px;
+  aspect-ratio: 1;
+  padding: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+
+  &:hover {
+    transform: scale(1.05);
+    border-color: var(--accent);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+  }
+}
+
+.back-button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--accent);
+  }
+}
+
+/* Full-size text editor for an open project. */
+.project-editor {
+  flex: 1;
+  min-height: 0;
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--bubble-border);
+  background: var(--bubble-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+
+  &:focus {
+    border-color: var(--accent);
+  }
+}
+
+/* Add folder / Add note, pushed to the right end of the Projects header. */
+.projects-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+}
+
+/* Projects bubbles: folders are circles, notes are rounded squares. */
+.project-bubble {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+
+  &.note {
+    border-radius: 24px;
+  }
+}
+
+.project-bubble-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+/* Edit button while edit mode is on, and bubbles waiting to be edited. */
+.back-button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.project-bubble.editing {
+  border-style: dashed;
+  border-color: var(--accent);
+  cursor: grab;
+}
+
+/* The bubble being dragged to a new spot in edit mode. */
+.project-bubble.dragging {
+  opacity: 0.4;
+}
+
+/* Library page: read-only table of a CSV from the csv folder in Google Drive. */
+.library-message {
+  margin: 16px 0 0;
+  max-width: 60ch;
+}
+
+.library-table-wrap {
+  flex: 1;
+  min-height: 0;
+  margin-top: 16px;
+  overflow: auto;
+  border: 1px solid var(--bubble-border);
+  border-radius: 8px;
+}
+
+.library-table {
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 6px 18px;
+    min-width: 8ch;
+    border-bottom: 1px solid var(--bubble-border);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  /* Year columns: tighter padding, and the header may wrap ("Release / Year"). */
+  .library-narrow {
+    /* 1px = shrink to the narrowest the content allows (tables never go below that). */
+    width: 1px;
+    min-width: 0;
+    padding-inline: 10px;
+  }
+
+  th.library-narrow {
+    white-space: normal;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: var(--bubble-bg);
+    font-weight: 600;
+  }
+
+  tbody tr:hover {
+    background: var(--bubble-bg);
+  }
+
+  /* Category heading rows: click to collapse/expand that category. */
+  .library-group-row th {
+    position: static;
+    padding: 0;
+    background: var(--bubble-bg);
+  }
+
+  .library-group-heading {
+    display: flex;
+    align-items: center;
+    padding-right: 6px;
+  }
+
+  .library-group-toggle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .library-group-caret {
+    width: 1em;
+  }
+
+  .library-group-count {
+    font-weight: 400;
+    opacity: 0.6;
+  }
+
+  /* Blank row at the end of each category for adding an entry to the CSV. */
+  .library-new-row td {
+    padding: 4px 6px;
+  }
+
+  .library-new-row:hover {
+    background: none;
+  }
+
+  .library-new-input {
+    width: 100%;
+    min-width: 12ch;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    font: inherit;
+    border: 1px dashed var(--bubble-border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .library-add-button {
+    padding: 3px 10px;
+    font: inherit;
+    border: 1px solid var(--bubble-border);
+    border-radius: 6px;
+    background: var(--bubble-bg);
+    color: var(--text);
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
+
+  /* Click a row to edit it in place. */
+  .library-row {
+    cursor: pointer;
+  }
+
+  .library-edit-row td {
+    padding: 4px 6px;
+  }
+
+  .library-row-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .library-delete-button {
+    color: #d33;
+  }
+
+  .library-save-error {
+    color: #d33;
+    white-space: normal;
+  }
+}

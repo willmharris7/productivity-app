@@ -1,0 +1,75 @@
+:root {
+  --text: #08060d;
+  --bg: #fff;
+  --bubble-bg: #f4f3ec;
+  --bubble-border: #e5e4e7;
+  --accent: #aa3bff;
+
+  font: 18px/145% system-ui, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f3f4f6;
+    --bg: #16171d;
+    --bubble-bg: #1f2028;
+    --bubble-border: #2e303a;
+    --accent: #c084fc;
+  }
+}
+
+body {
+  margin: 0;
+}
+
+/* Shown by DriveGate until Google Drive is connected and the Files folder is listed. */
+.drive-gate {
+  min-height: 100svh;
+  box-sizing: border-box;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+
+  h1 {
+    margin: 0;
+    font-size: 28px;
+    font-weight: 500;
+  }
+  p {
+    margin: 0;
+    max-width: 50ch;
+  }
+}
+
+/* DriveGate's bar asking to sign in again once the token runs out. */
+.drive-reconnect {
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+  background: var(--bubble-bg);
+  font-size: 15px;
+
+  .md-file-error {
+    margin: 0;
+  }
+}
