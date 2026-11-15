@@ -659,7 +659,6 @@
 .project-bubble.editing {
   border-style: dashed;
   border-color: var(--accent);
-  cursor: grab;
 }
 
 /* The bubble being dragged to a new spot in edit mode. */

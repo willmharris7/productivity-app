@@ -369,6 +369,63 @@ export async function createFolder(path: string) {
   folders.set(path.toLowerCase(), { path, id, mimeType: FOLDER_MIME })
 }
 
+function entryAt(path: string): Entry {
+  const key = path.toLowerCase()
+  const entry = files.get(key) ?? folders.get(key)
+  if (!entry) throw new Error(`${baseName(path)} isn't in the Files folder in Google Drive.`)
+  return entry
+}
+
+// Lower-cased keys of the file or folder at `path` and, for a folder, everything inside it.
+function keysUnder(path: string) {
+  const key = path.toLowerCase()
+  const inside = (k: string) => k === key || k.startsWith(`${key}/`)
+  return { fileKeys: [...files.keys()].filter(inside), folderKeys: [...folders.keys()].filter(inside) }
+}
+
+// Renames the file or folder at `path` to `newName`, keeping it in the same folder.
+export async function rename(path: string, newName: string) {
+  const entry = entryAt(path)
+  const newPath = `${path.slice(0, path.length - baseName(path).length)}${newName}`
+  if (newPath.toLowerCase() !== path.toLowerCase() && exists(newPath))
+    throw new Error(`There's already something named ${newName} here.`)
+  await driveFetch(`${API}/files/${entry.id}?fields=id`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({ name: newName }),
+  })
+  // Re-key it and (for a folder) everything inside it under the new path.
+  const { fileKeys, folderKeys } = keysUnder(path)
+  for (const key of fileKeys) {
+    const old = files.get(key)!
+    files.delete(key)
+    const moved = newPath + old.path.slice(path.length)
+    files.set(moved.toLowerCase(), { ...old, path: moved })
+  }
+  for (const key of folderKeys) {
+    const old = folders.get(key)!
+    folders.delete(key)
+    const moved = newPath + old.path.slice(path.length)
+    folders.set(moved.toLowerCase(), { ...old, path: moved })
+  }
+}
+
+// Moves the file or folder at `path` (with everything inside it) to the Google Drive trash,
+// where it can still be restored for 30 days.
+export async function trash(path: string) {
+  const entry = entryAt(path)
+  await driveFetch(`${API}/files/${entry.id}?fields=id`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({ trashed: true }),
+  })
+  const { fileKeys, folderKeys } = keysUnder(path)
+  const ids = fileKeys.map((key) => files.get(key)!.id)
+  for (const key of fileKeys) files.delete(key)
+  for (const key of folderKeys) folders.delete(key)
+  await cacheWrite([], ids)
+}
+
 function find(path: string): FileEntry {
   const entry = files.get(path.toLowerCase())
   if (!entry) throw new Error(`${baseName(path)} isn't in the Files folder in Google Drive.`)

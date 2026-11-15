@@ -2,7 +2,7 @@ import { useState } from 'react'
 import NameDialog from './NameDialog.tsx'
 import NotesTextarea from './NotesTextarea.tsx'
 import useMdFile from './useMdFile.ts'
-import { createFolder, exists, listFiles, listFolders, saveText } from './drive.ts'
+import { createFolder, exists, listFiles, listFolders, rename, saveText, trash } from './drive.ts'
 
 type MdNote = {
   name: string // file name without .md
@@ -20,9 +20,10 @@ const sameFolder = (a: string[], b: string[]) =>
 // A page showing the .md files in one md folder in Google Drive as bubbles (styled like the old
 // Projects page): subfolders are folder bubbles, files are note bubbles. Clicking a note
 // opens it in the editor, saved back into the file (see useMdFile). Add Folder and Add
-// Note create a folder or an empty .md file in Drive, in the folder being viewed.
+// Note create a folder or an empty .md file in Drive, in the folder being viewed. In edit
+// mode (the Edit button), clicking a bubble renames it or moves it to the Drive trash.
 function MdFolderScreen({ title }: Props) {
-  // Bumped after creating a folder or note, to re-read the listing.
+  // Bumped after creating, renaming or deleting, to re-read the listing.
   const [, setCreated] = useState(0)
   const notes: MdNote[] = listFiles(`md/${title}`, '.md').map((path) => {
     const file = path.slice('md/'.length)
@@ -40,8 +41,14 @@ function MdFolderScreen({ title }: Props) {
   const open = notes.find((note) => note.file === openFile)
   // Which name dialog is open, and the error from the last create, if any.
   const [adding, setAdding] = useState<'folder' | 'note' | null>(null)
-  const [busy, setBusy] = useState(false)
+  // What's being changed in Drive right now, shown as a status line.
+  const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Edit mode, and the bubble whose rename/delete dialog is open.
+  const [editing, setEditing] = useState(false)
+  const [editTarget, setEditTarget] = useState<{ kind: 'folder' | 'note'; name: string } | null>(
+    null,
+  )
 
   if (open) {
     return <MdNoteEditor key={open.file} note={open} onBack={() => setOpenFile(null)} />
@@ -59,28 +66,69 @@ function MdFolderScreen({ title }: Props) {
     .map((parts) => parts[folder.length])
     .sort((a, b) => a.localeCompare(b))
 
-  // Creates the folder or note named `name` in the folder being viewed; a new note opens.
-  async function create(kind: 'folder' | 'note', name: string) {
-    setAdding(null)
+  // Path in Drive of the folder or note named `name` in the folder being viewed.
+  const pathOf = (kind: 'folder' | 'note', name: string) =>
+    ['md', title, ...folder, kind === 'note' && !/\.md$/i.test(name) ? `${name}.md` : name].join(
+      '/',
+    )
+
+  // Runs a Drive change, showing `status` meanwhile and any error after.
+  async function run(status: string, change: () => Promise<void>) {
     setError(null)
-    if (/[/\\]/.test(name)) return setError('Names can’t contain / or \\.')
-    const fileName = kind === 'note' && !/\.md$/i.test(name) ? `${name}.md` : name
-    const path = ['md', title, ...folder, fileName].join('/')
-    if (exists(path))
-      return setError(`There's already a ${kind === 'note' ? 'note' : 'folder'} named ${name} here.`)
-    setBusy(true)
+    setBusy(status)
     try {
+      await change()
+      setCreated((n) => n + 1)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const badName = (name: string) =>
+    /[/\\]/.test(name) ? 'Names can’t contain / or \\.' : null
+
+  // Creates the folder or note named `name` in the folder being viewed; a new note opens.
+  function create(kind: 'folder' | 'note', name: string) {
+    setAdding(null)
+    const path = pathOf(kind, name)
+    const problem =
+      badName(name) ??
+      (exists(path) ? `There's already a ${kind} named ${name} here.` : null)
+    if (problem) return setError(problem)
+    run('Creating in Google Drive…', async () => {
       if (kind === 'folder') await createFolder(path)
       else {
         await saveText(path, null, '')
         setOpenFile(path.slice('md/'.length))
       }
-      setCreated((n) => n + 1)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setBusy(false)
-    }
+    })
+  }
+
+  function renameTarget(newName: string) {
+    if (!editTarget) return
+    const { kind, name } = editTarget
+    setEditTarget(null)
+    const from = pathOf(kind, name)
+    const to = pathOf(kind, newName)
+    if (from === to) return
+    const problem =
+      badName(newName) ??
+      (to.toLowerCase() !== from.toLowerCase() && exists(to)
+        ? `There's already a ${kind} named ${newName} here.`
+        : null)
+    if (problem) return setError(problem)
+    run('Renaming in Google Drive…', () => rename(from, to.split('/').pop()!))
+  }
+
+  function deleteTarget() {
+    if (!editTarget) return
+    const { kind, name } = editTarget
+    const what = kind === 'folder' ? `the folder "${name}" and everything in it` : `"${name}"`
+    if (!window.confirm(`Move ${what} to the Google Drive trash?`)) return
+    setEditTarget(null)
+    run('Moving to the Google Drive trash…', () => trash(pathOf(kind, name)))
   }
 
   return (
@@ -100,7 +148,7 @@ function MdFolderScreen({ title }: Props) {
           <button
             type="button"
             className="back-button"
-            disabled={busy}
+            disabled={busy !== null}
             onClick={() => setAdding('folder')}
           >
             Add Folder
@@ -108,10 +156,18 @@ function MdFolderScreen({ title }: Props) {
           <button
             type="button"
             className="back-button"
-            disabled={busy}
+            disabled={busy !== null}
             onClick={() => setAdding('note')}
           >
             Add Note
+          </button>
+          <button
+            type="button"
+            className={`back-button${editing ? ' active' : ''}`}
+            aria-pressed={editing}
+            onClick={() => setEditing(!editing)}
+          >
+            {editing ? 'Done' : 'Edit'}
           </button>
         </div>
       </div>
@@ -122,7 +178,17 @@ function MdFolderScreen({ title }: Props) {
           onClose={() => setAdding(null)}
         />
       )}
-      {busy && <p className="library-message">Creating in Google Drive…</p>}
+      {editTarget && (
+        <NameDialog
+          title={editTarget.kind === 'folder' ? 'Edit folder' : 'Edit note'}
+          initialName={editTarget.name}
+          saveLabel="Save"
+          onSave={renameTarget}
+          onDelete={deleteTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
+      {busy && <p className="library-message">{busy}</p>}
       {error && <p className="md-file-error">{error}</p>}
       {notes.length === 0 && folders.length === 0 && (
         <p className="library-message">No .md files in md/{title}.</p>
@@ -132,8 +198,13 @@ function MdFolderScreen({ title }: Props) {
           <button
             key={note.file}
             type="button"
-            className="project-bubble note"
-            onClick={() => setOpenFile(note.file)}
+            className={`project-bubble note${editing ? ' editing' : ''}`}
+            disabled={busy !== null && editing}
+            onClick={() =>
+              editing
+                ? setEditTarget({ kind: 'note', name: note.name })
+                : setOpenFile(note.file)
+            }
           >
             <span className="project-bubble-icon" aria-hidden="true">
               📝
@@ -145,8 +216,11 @@ function MdFolderScreen({ title }: Props) {
           <button
             key={name}
             type="button"
-            className="project-bubble folder"
-            onClick={() => setFolder([...folder, name])}
+            className={`project-bubble folder${editing ? ' editing' : ''}`}
+            disabled={busy !== null && editing}
+            onClick={() =>
+              editing ? setEditTarget({ kind: 'folder', name }) : setFolder([...folder, name])
+            }
           >
             <span className="project-bubble-icon" aria-hidden="true">
               📁
