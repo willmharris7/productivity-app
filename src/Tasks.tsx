@@ -13,7 +13,7 @@ function Tasks({ notesOpen, onNotesClick }: Props) {
   return (
     <section className="tasks">
       <div className="tasks-header">
-        <h2>Tasks!</h2>
+        <h2>Tasks</h2>
         <button
           type="button"
           className={`back-button${notesOpen ? ' active' : ''}`}
