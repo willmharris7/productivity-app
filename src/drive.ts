@@ -336,7 +336,38 @@ export function listFiles(folder: string, extension: string, recursive = true): 
     })
 }
 
+// Paths of the folders below `folder` (e.g. 'md/Projects'), at any depth, including empty
+// ones. Call after loadIndex().
+export function listFolders(folder: string): string[] {
+  const prefix = `${folder.toLowerCase()}/`
+  return [...folders.values()]
+    .map((entry) => entry.path)
+    .filter((path) => path.toLowerCase().startsWith(prefix))
+}
+
+// Whether a file or folder exists at `path` (ignoring case).
+export function exists(path: string): boolean {
+  const key = path.toLowerCase()
+  return files.has(key) || folders.has(key)
+}
+
 const baseName = (path: string) => path.split('/').pop()!
+
+// Creates an empty folder at `path`; its parent folder must already exist.
+export async function createFolder(path: string) {
+  const name = baseName(path)
+  if (exists(path)) throw new Error(`There's already something named ${name} here.`)
+  const parentPath = path.slice(0, path.length - name.length - 1)
+  const parent = folders.get(parentPath.toLowerCase())
+  if (!parent) throw new Error(`There's no ${parentPath} folder in the Files folder in Google Drive.`)
+  const res = await driveFetch(`${API}/files?fields=id`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+    body: JSON.stringify({ name, mimeType: FOLDER_MIME, parents: [parent.id] }),
+  })
+  const { id } = (await res.json()) as { id: string }
+  folders.set(path.toLowerCase(), { path, id, mimeType: FOLDER_MIME })
+}
 
 function find(path: string): FileEntry {
   const entry = files.get(path.toLowerCase())
@@ -372,7 +403,7 @@ function remember(entry: Entry, md5: string, text: string) {
 export async function saveText(path: string, original: string | null, text: string) {
   const name = baseName(path)
   if (original === null) {
-    if (files.has(path.toLowerCase())) throw new Error(`A file named ${name} already exists.`)
+    if (exists(path)) throw new Error(`A file named ${name} already exists.`)
     const folderPath = path.slice(0, path.length - name.length - 1)
     const parent = folders.get(folderPath.toLowerCase())
     if (!parent) throw new Error(`There's no ${folderPath} folder in the Files folder in Google Drive.`)
