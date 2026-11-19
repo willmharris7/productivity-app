@@ -22,6 +22,7 @@ import SourcesScreen from './SourcesScreen.tsx'
 import NotesScreen from './NotesScreen.tsx'
 import LibraryScreen from './LibraryScreen.tsx'
 import MdFolderScreen from './MdFolderScreen.tsx'
+import SocialScreen from './SocialScreen.tsx'
 import NewCalendarDialog from './NewCalendarDialog.tsx'
 import { CALENDAR_PALETTE, DEFAULT_CALENDAR } from './calendars.ts'
 import { toDateStr, type EventFields } from './events.ts'
@@ -240,12 +241,7 @@ function App() {
           title="Projects"
         />
       )}
-      {mainScreen === 'social' && (
-        <MdFolderScreen
-          key={`social-${navVisit}`}
-          title="Social"
-        />
-      )}
+      {mainScreen === 'social' && <SocialScreen />}
       {mainScreen === 'info' && (
         <MdFolderScreen
           key={`info-${navVisit}`}
