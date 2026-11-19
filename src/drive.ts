@@ -3,7 +3,7 @@
 // Paths here are relative to that folder, e.g. 'md/Tasks/Tasks.md', and are matched
 // ignoring case.
 //
-// loadIndex() downloads every .md, .csv and .ics file in the folder up front and keeps
+// loadIndex() downloads every .md, .csv, .ics and .json file in the folder up front and keeps
 // them in memory, so reading a file is instant. Downloads are also kept in IndexedDB:
 // on the next visit only files whose checksum changed in Drive are downloaded again.
 // Saves go straight to Drive and update both copies.
@@ -213,7 +213,7 @@ async function cacheWrite(put: Cached[], remove: string[] = []) {
 // ---- The Files folder ----
 
 // Only these are downloaded and listed; anything else in the folder is ignored.
-const EXTENSIONS = ['.md', '.csv', '.ics']
+const EXTENSIONS = ['.md', '.csv', '.ics', '.json']
 
 type Entry = { path: string; id: string; mimeType: string }
 type FileEntry = Entry & { md5: string; bytes: ArrayBuffer }
@@ -352,12 +352,14 @@ export function exists(path: string): boolean {
 }
 
 const baseName = (path: string) => path.split('/').pop()!
+// Path of the folder holding `path`; '' is the Files folder itself.
+const parentOf = (path: string) => path.split('/').slice(0, -1).join('/')
 
 // Creates an empty folder at `path`; its parent folder must already exist.
 export async function createFolder(path: string) {
   const name = baseName(path)
   if (exists(path)) throw new Error(`There's already something named ${name} here.`)
-  const parentPath = path.slice(0, path.length - name.length - 1)
+  const parentPath = parentOf(path)
   const parent = folders.get(parentPath.toLowerCase())
   if (!parent) throw new Error(`There's no ${parentPath} folder in the Files folder in Google Drive.`)
   const res = await driveFetch(`${API}/files?fields=id`, {
@@ -446,6 +448,7 @@ const MIME_TYPES: Record<string, string> = {
   md: 'text/markdown',
   csv: 'text/csv',
   ics: 'text/calendar',
+  json: 'application/json',
 }
 
 function remember(entry: Entry, md5: string, text: string) {
@@ -461,7 +464,7 @@ export async function saveText(path: string, original: string | null, text: stri
   const name = baseName(path)
   if (original === null) {
     if (exists(path)) throw new Error(`A file named ${name} already exists.`)
-    const folderPath = path.slice(0, path.length - name.length - 1)
+    const folderPath = parentOf(path)
     const parent = folders.get(folderPath.toLowerCase())
     if (!parent) throw new Error(`There's no ${folderPath} folder in the Files folder in Google Drive.`)
     const mimeType = MIME_TYPES[name.split('.').pop()!.toLowerCase()] ?? 'text/plain'
