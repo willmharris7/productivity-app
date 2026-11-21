@@ -9,6 +9,18 @@
   grid-template-areas:
     'tasks calendar'
     'nav calendar';
+
+  /* Phones: one column, Tasks on top, then the nav, then the current screen. */
+  @media (max-width: 700px) {
+    padding: 10px;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(120px, 22svh) auto minmax(0, 1fr);
+    grid-template-areas:
+      'tasks'
+      'nav'
+      'calendar';
+  }
 }
 
 .panel {
@@ -115,6 +127,34 @@
   padding: 4px;
   font-size: 16px;
   overflow-wrap: anywhere;
+
+  @media (max-width: 700px) {
+    min-height: 44px;
+    font-size: 15px;
+    overflow-wrap: normal;
+  }
+}
+
+/* Calendar toolbar (class set by toolbarClass in App.tsx): on phones, let the button groups
+   wrap onto extra rows instead of overflowing the panel. */
+@media (max-width: 700px) {
+  .calendar-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+
+    h2 {
+      font-size: 20px;
+    }
+    button {
+      font-size: 14px;
+    }
+  }
+  .calendar {
+    padding: 8px;
+  }
+  .tasks {
+    padding: 12px;
+  }
 }
 
 .calendars-menu {

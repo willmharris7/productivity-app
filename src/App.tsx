@@ -298,6 +298,8 @@ function App() {
             center: 'title',
             end: 'prev,next today dayGridMonth,timeGridWeek,timeGridDay',
           }}
+          // Hook for the phone layout in App.css, which lets the toolbar wrap.
+          toolbarClass="calendar-toolbar"
           height="100%"
           // Cap events at whatever fits in the day cell so rows never grow;
           // overflow is replaced by an event-style "..." bar (opens the full list).
