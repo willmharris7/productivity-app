@@ -10,12 +10,14 @@
     'tasks calendar'
     'nav calendar';
 
-  /* Phones: one column, Tasks on top, then the nav, then the current screen. */
+  /* Phones: one column, Tasks on top, then the nav, then the current screen. The page
+     scrolls; Tasks and the current screen are the same height. */
   @media (max-width: 700px) {
+    height: auto;
     padding: 10px;
     gap: 10px;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(120px, 22svh) auto minmax(0, 1fr);
+    grid-template-rows: 80svh auto 80svh;
     grid-template-areas:
       'tasks'
       'nav'
