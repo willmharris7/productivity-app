@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 type Props = {
   title: string
@@ -7,6 +7,7 @@ type Props = {
   onSave: (name: string) => void
   onDelete?: () => void // shows a Delete button when given
   onClose: () => void
+  children?: ReactNode // extra fields, shown below the name
 }
 
 // Small modal that asks for a name (creating, renaming or deleting folders and notes).
@@ -17,6 +18,7 @@ function NameDialog({
   onSave,
   onDelete,
   onClose,
+  children,
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
   const [name, setName] = useState(initialName)
@@ -52,6 +54,7 @@ function NameDialog({
             autoFocus
           />
         </label>
+        {children}
         <div className="event-dialog-actions">
           {onDelete && (
             <button type="button" className="danger" onClick={onDelete}>

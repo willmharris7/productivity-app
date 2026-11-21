@@ -16,7 +16,11 @@ function load(path: string): { text: string | null; error: string | null } {
 // Drive since it was loaded (see saveText). Read once per mount: give each file its own
 // component (key it by file).
 function useMdFile(file: string) {
-  const path = `md/${file}`
+  return useTextFile(`md/${file}`)
+}
+
+// The same for any text file, by its path in the Files folder, e.g. 'json/Alice.json'.
+export function useTextFile(path: string) {
   const [initial] = useState(() => load(path))
   const [text, setText] = useState(initial.text)
   const [error, setError] = useState(initial.error)

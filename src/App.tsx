@@ -22,7 +22,7 @@ import SourcesScreen from './SourcesScreen.tsx'
 import NotesScreen from './NotesScreen.tsx'
 import LibraryScreen from './LibraryScreen.tsx'
 import MdFolderScreen from './MdFolderScreen.tsx'
-import SocialScreen from './SocialScreen.tsx'
+import CommunicationScreen from './CommunicationScreen.tsx'
 import NewCalendarDialog from './NewCalendarDialog.tsx'
 import { CALENDAR_PALETTE, DEFAULT_CALENDAR } from './calendars.ts'
 import { toDateStr, type EventFields } from './events.ts'
@@ -31,24 +31,24 @@ import useIcsCalendars from './useIcsCalendars.ts'
 
 // Bottom-left navigation, a 3-column x 2-row grid listed row by row:
 //   Calendar | Library | Projects
-//   Events   | Info    | Social
+//   Events   | Info    | Communication
 // Every item switches the main screen.
-// 'notes' isn't in the nav; it's opened from the Notes button in the Tasks header.
+// Notes isn't a screen in the nav; it's opened over the current screen from the Notes button in
+// the Tasks header (see notesOpen).
 type Screen =
   | 'calendar'
   | 'library'
   | 'sources'
   | 'projects'
   | 'info'
-  | 'social'
-  | 'notes'
+  | 'communication'
 const NAV_ITEMS: { name: string; screen?: Screen }[] = [
   { name: 'Calendar', screen: 'calendar' },
   { name: 'Library', screen: 'library' },
   { name: 'Projects', screen: 'projects' },
   { name: 'Events', screen: 'sources' },
   { name: 'Info', screen: 'info' },
-  { name: 'Social', screen: 'social' },
+  { name: 'Communication', screen: 'communication' },
 ]
 
 // Two clicks on the same day within this window count as a double-click.
@@ -69,7 +69,10 @@ function App() {
   const [mainScreen, setMainScreen] = useState<Screen>(
     'calendar',
   )
-  // Bumped on every nav click; remounting a notes screen (Projects, Social, Info)
+  // Whether Notes covers the main screen. The screen underneath stays mounted (just hidden),
+  // so closing Notes returns to it as it was, e.g. with the same folder, note or contact open.
+  const [notesOpen, setNotesOpen] = useState(false)
+  // Bumped on every nav click; remounting a notes screen (Projects, Communication, Info)
   // returns it to the top level, even when it's already showing.
   // Library uses it too, to go back from an open CSV to the list of files.
   const [navVisit, setNavVisit] = useState(0)
@@ -206,11 +209,9 @@ function App() {
   return (
     <main className="layout">
       <Tasks
-        notesOpen={mainScreen === 'notes'}
-        // Toggles: clicking Notes again returns to the calendar.
-        onNotesClick={() =>
-          setMainScreen(mainScreen === 'notes' ? 'calendar' : 'notes')
-        }
+        notesOpen={notesOpen}
+        // Toggles: clicking Notes again returns to the screen that was showing before.
+        onNotesClick={() => setNotesOpen(!notesOpen)}
       />
       <nav className="main-nav">
         {NAV_ITEMS.map(({ name, screen }) => (
@@ -218,11 +219,12 @@ function App() {
             key={name}
             type="button"
             className={`panel nav-button${
-              screen && screen === mainScreen ? ' active' : ''
+              !notesOpen && screen === mainScreen ? ' active' : ''
             }`}
-            aria-current={screen && screen === mainScreen ? 'page' : undefined}
+            aria-current={!notesOpen && screen === mainScreen ? 'page' : undefined}
             onClick={() => {
               if (screen) setMainScreen(screen)
+              setNotesOpen(false)
               setNavVisit((n) => n + 1)
             }}
           >
@@ -230,7 +232,10 @@ function App() {
           </button>
         ))}
       </nav>
-      {mainScreen === 'notes' && <NotesScreen />}
+      {notesOpen && <NotesScreen />}
+      {/* While Notes is open, the main screen is hidden but kept mounted; display: contents
+          keeps it in the layout grid as if this wrapper weren't there. */}
+      <div style={{ display: notesOpen ? 'none' : 'contents' }}>
       {mainScreen === 'library' && <LibraryScreen key={`library-${navVisit}`} />}
       {mainScreen === 'sources' && (
         <SourcesScreen />
@@ -241,18 +246,19 @@ function App() {
           title="Projects"
         />
       )}
-      {mainScreen === 'social' && <SocialScreen />}
+      {mainScreen === 'communication' && <CommunicationScreen />}
       {mainScreen === 'info' && (
         <MdFolderScreen
           key={`info-${navVisit}`}
           title="Info"
         />
       )}
+      </div>
       {/* Hidden rather than unmounted, so the calendar keeps its view and date. */}
       <section
         className="calendar"
         ref={calendarRef}
-        hidden={mainScreen !== 'calendar'}
+        hidden={notesOpen || mainScreen !== 'calendar'}
       >
         <FullCalendar
           plugins={[

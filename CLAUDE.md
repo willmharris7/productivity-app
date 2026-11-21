@@ -5,13 +5,19 @@ https://willmharris7.github.io/productivity-app/ by `.github/workflows/deploy.ym
 push to `main`. All user data lives in the user's Google Drive (see `src/drive.ts`); none is
 in this repo.
 
-## Ship every change live
+## Work locally by default
 
-After every change requested in this project, without asking first:
+Make requested changes in the local working tree only. Don't commit, push, or deploy unless
+the user explicitly asks (for example "ship it", "push", "deploy", "publish live"). Running
+`npm run build` locally to type-check a change is fine.
+
+## Shipping live (only when asked)
+
+When the user asks to ship:
 
 1. Don't run or test the app locally (no `npm run dev`, no local browser checks). CI runs
    `npm run build` (type check + build), and a failing build never deploys.
-2. Commit the change to `main` with a short message describing it, then `git push`.
+2. Commit the change(s) to `main` with a short message describing them, then `git push`.
 3. Wait for the deploy: `gh run list --limit 1` for the run ID, then
    `gh run watch <id> --exit-status`. If it fails, read the log with
    `gh run view <id> --log-failed`, fix the problem, and push again.
